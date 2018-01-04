@@ -1,0 +1,372 @@
+#include<iostream>
+#include<fstream>
+#include<string>
+#include<queue>
+#include<string.h>
+#include<stack>
+#include<cmath>
+#include<iomanip>
+#include<algorithm>
+using namespace std;
+
+int reachable;//keep a running count of how many successors you can reach
+int putonfringe;//keep a running count of how many successors  were put on the fringe
+
+struct nodetype{    // the state
+    char state[4][4][4];
+    int parent; // position of the parent in the vector of nodes
+    int action;
+    int depth;
+    int pathcost; //depth and pathcost are the same because the path between every node and its adjacent nodes is 1
+    int row,col,dep; // coordinates of the 0, used to produce the adjacent states
+    int positionintree;//position of the node in the vector of nodes
+    int child[5];  //position of the children in the vector of nodes (used for printing the tree
+};
+
+// print a state on the screen (3 matrices on the sames line for 3D puzzles)
+void printstate(nodetype node,int n,int squares,bool indent){
+
+        for(int i=0;i<n;i++){
+             if(indent)     for(int l=0;l<node.pathcost;l++) cout << "\t";
+            for(int k=0;k<squares;k++){
+            for(int j=0;j<n;j++){
+            if (node.state[i][j][k]=='0') cout << " ";
+            else
+                cout << node.state[i][j][k];
+                }
+            if(!((i==n-1)&&(k==squares-1))) cout << " ";
+        }
+         if(i<n-1)cout << "\n"; //jump a line after each row except the last
+    }
+}
+
+// compare the two nodes square by square for the 15 puzzle
+
+// compare the two nodes cubie by cubie for the 26 and 36 puzzle
+bool comparenodes(nodetype node1,nodetype node2,int n,int squares){
+    for(int k=0;k<squares;k++)
+        for (int i=0;i<n;i++)
+            for (int j=0;j<n;j++)
+                if (node1.state[i][j][k] != node2.state[i][j][k])
+                    return 0;
+    return 1;
+}
+
+//check if the node was visited already
+bool visited(nodetype node,vector<nodetype> searchtree,int n,int squares){
+    for(int i=0;i<searchtree.size();i++)//for each node in the searchtree
+        if (comparenodes(node,searchtree[i],n,squares)) //use the comparenodes() funcition to compare the node with the node of the searchtree
+            return 1;
+return 0;
+}
+
+int mandist(nodetype node,nodetype goalnode,int n){
+    int mad=0;
+   for(int l=0;l<n;l++)
+   for(int k=0;k<n;k++)
+    for(int i=0;i<n;i++)
+        for(int j=0;j<n;j++)
+            if(node.state[l][k]==goalnode.state[i][j]){
+                mad+=abs(i)+abs(j-k);
+            }
+    return mad;
+}
+
+//It's the previous function adapted for 3D
+vector<nodetype> nexstates(nodetype node,int n,vector<nodetype> searchtree,int squares){
+    vector<nodetype> nextvec;//result of expansion
+    cout<<"\nExpanding the following state:\n";
+    printstate(node,n,squares,false);
+    cout<<"\n\n";
+    int possiblemoves=4;
+    if (squares==3)possiblemoves=6;
+    nodetype newnode;//temporary new node generated
+    int row,col,dep;//temporary position of the zero
+    int colinc3D[6]={1,0,0,-1,0,0};// used to get to the next position: right, down,forward, left, up,backward
+    int rowinc3D[6]={0,1,0,0,-1,0};
+    int depinc3D[6]={0,0,1,0,0,-1};
+
+    int colinc[4]={1,0,-1,0};// used to get to the next position of the zero in this order: DOWN, RIGHT, LEFT, UP
+    int rowinc[4]={0,1,0,-1};
+
+    for(int i=0;i<possiblemoves;i++){
+
+
+        //row col and depth temporarily take the values of themselves in the previous node
+        row=node.row;
+        col=node.col;
+        dep=node.dep;
+
+        //they are incremented to get the child node
+        if(squares==1){
+        while (node.action==(i+2)%4)i++;//avoid returning to the previous state
+        row+=rowinc[i];
+        col+=colinc[i];
+        }
+        else{
+        while (node.action==(i+3)%6) i++;
+        row+=rowinc3D[i];
+        col+=colinc3D[i];
+        dep+=depinc3D[i];
+        }
+        if(squares==3){
+            if (i==4) return nextvec;}
+        else{
+            if (i==6) return nextvec;}
+        if(row>=0 && col>=0 && row<n && col<n && dep>=0 && dep<n){
+             reachable++;//keep
+
+            newnode=node;//the parent node is copied to its child node
+            newnode.row=row;//the new coordinates of the zero are assigned
+            newnode.col=col;
+            newnode.dep=dep;
+            newnode.state[node.row][node.col][node.dep]=node.state[row][col][dep]; // The zero is exchanged with the character in its new coordinates
+            newnode.state[row][col][dep]='0';
+            newnode.action=i;
+            newnode.depth=node.depth+1;
+            newnode.pathcost=node.pathcost+1;
+
+            for(int j=0;j<5;j++) newnode.child[i]=-1;
+
+            if(!visited(newnode,searchtree,n,squares)){
+                    putonfringe++;
+              if (squares==3){
+            if (i==0) cout<< "RIGHT\n"; //print action
+            if (i==1) cout<< "DOWN\n";
+            if (i==2) cout<< "FORWARD\n";
+            if (i==3) cout<< "LEFT\n";
+            if (i==4) cout<< "UP\n";
+            if (i==5) cout<< "BACKWARD\n";
+                    }
+            else {
+            if (i==0) cout<< "RIGHT\n";
+            if (i==1) cout<< "DOWN\n";
+            if (i==2) cout<< "LEFT\n";
+            if (i==3) cout<< "UP\n";
+            }
+            printstate(newnode,n,squares,false);
+            cout<<"\n\n";
+
+            nextvec.push_back(newnode);
+            }
+        }}
+    return nextvec;
+}
+
+//compute the Manhattan distance between two nodes
+void printpath(vector<nodetype> searchtree,int n,int squares){
+    int i=searchtree.size()-1;
+    do{
+            printstate(searchtree[i],n,squares,false);
+            cout<<"\n\n";
+        i=searchtree[i].parent;
+    }while (searchtree[i].parent!=-1);
+    printstate(searchtree[0],n,squares,false);
+    cout<<"\n\n";
+}
+
+//print the tree; print the first child before the root and the next after
+void printtree(vector<nodetype> searchtree,int j,int n,int squares){
+    int i=1;
+    if(searchtree[j].child[0]!=-1)
+        printtree(searchtree,searchtree[j].child[0],n,squares);
+    printstate(searchtree[j],n,squares,true);
+
+    if(searchtree[j].child[0]==-1) cout<<".";
+    cout<<"\n\n";
+
+    while (searchtree[j].child[i]!=-1){
+        printtree(searchtree,searchtree[j].child[i++],n,squares);
+    }
+}
+
+void Search(nodetype initnode,nodetype goalnode,int searchtype,int n,int squares){
+    reachable=0;//keep a running count of how many successors you can reach
+    putonfringe=0;
+    vector <nodetype> searchtree;
+    vector <nodetype> nextvec; //contains the direct children of a node
+    vector<nodetype> fringe; // used in A*
+    queue <nodetype> q; // used in BFS
+    stack <nodetype> s; // used in DFS
+    nodetype node; //temporary node used for every search
+    int pos=0; //used to remember the position of a node in the fringe to erase it from it when expanded
+    int expanded=0; //number of nodes expanded
+    bool yesorno;//user choice: continue search or not (after expanding 50 nodes)?
+    int prtpos;//saves the position in tree of the parent (used for adding pointers to children)
+
+//put initial node in closed list
+    searchtree.push_back(initnode);
+
+//put initial nodes in open lists for search
+    if(searchtype==2) s.push(initnode);
+    if(searchtype==3) fringe.push_back(initnode);
+    if(searchtype==1) q.push(initnode);
+    if (comparenodes(initnode,goalnode,n,squares)) {
+            cout<< "\nFOUND!... the initial and goal nodes are identical\n";
+            return ;
+    }
+    node=initnode; // the temporary node takes the value of the first node
+
+//BFS, DFS or A* Search
+    while (!q.empty() || !s.empty() || !fringe.empty()){
+//save the first node in the open lists as a temporary node and pop it
+        if (searchtype==2){
+                node=s.top();
+        }
+        if (searchtype==1){
+            node=q.front();
+        }
+        if (searchtype==3){
+            node=fringe.front();
+            for(int j=0;j<fringe.size();j++){
+                if((mandist(fringe[j],goalnode,n)+fringe[j].depth)<=(mandist(node,goalnode,n)+node.depth)){
+                    node=fringe[j];
+                    pos=j;
+                }
+            }
+            fringe.erase(fringe.begin()+pos);
+        }
+        prtpos=node.positionintree;
+
+//generate next nodes
+        nextvec=nexstates(node,n,searchtree,squares);
+        expanded++;//count the number of nodes expanded
+
+//punctually ask the user if they want to stop
+        if (expanded%100==0){
+               cout << "Do you want to continue?"<<"\n"<<"Enter: \n0 to stop and print the tree \n1 to continue\n";
+             cin >> yesorno; if (yesorno==0)
+           {
+            printtree(searchtree,0,n,squares);
+            cout <<"\n"<< expanded << " nodes expanded.\n";
+            cout <<(double)putonfringe/(double)reachable*100 <<"% of successors were put on the fringe\n";
+           return;
+           }
+                }
+
+//put the next nodes in the closed list (search tree)
+        for(int i=0;i<nextvec.size();i++){
+                nextvec[i].positionintree=searchtree.size();
+                nextvec[i].parent=node.positionintree;
+                searchtree[node.positionintree].child[i]=nextvec[i].positionintree;
+                if (searchtype==1){ q.push(nextvec[i]);
+                }
+                if (searchtype==2) s.push(nextvec[i]);
+                if (searchtype==3) fringe.push_back(nextvec[i]);
+                searchtree.push_back(nextvec[i]);
+                if (comparenodes(nextvec[i],goalnode,n,squares)){
+
+                        cout <<"\n"<<(double)putonfringe/(double)reachable*100 <<"% of successors were put on the fringe\n";
+                        cout <<"\nFOUND!\n"<< expanded << " nodes expanded\nSolution depth/path cost: "<<nextvec[i].pathcost<<
+                        "\nPrint path?(1 for yes and 0 for no)\n";
+                        cin >> yesorno;
+                        if(yesorno) printpath(searchtree,n,squares);
+                        cout<<"Print tree?(1 for yes and 0 for no)\n";
+                        cin>> yesorno;
+                        if(yesorno) printtree(searchtree,0,n,squares);
+                        else  cout << "Have a great day!\n";
+                        return ;
+                }
+            }
+    if (searchtype==2) s.pop();
+    if (searchtype==1)q.pop();
+    nextvec.clear();
+    }
+//Greedy best-frist search
+    if(searchtype==4){
+        nodetype prevnode=initnode; //this node will be used to check if we reached a local maximum
+        do{
+            if (comparenodes(node,goalnode,n,squares)){
+                 cout <<"\nFOUND!\n"<< expanded << " nodes expanded.\n";
+
+            cout <<(double)putonfringe/(double)reachable*100 <<"% of successors were put on the fringe\n";
+
+                return;}
+
+        prevnode=node;
+        nextvec=nexstates(node,n,searchtree,squares);
+        expanded++;
+        if (expanded%50==0){
+            cout << "Do you want to continue?"<<"\n"<<"Enter: \n0 to stop and print the tree \n1 to continue\n";
+            cin >> yesorno;
+            if (yesorno==0) {cout <<"\n"<< expanded << " nodes expanded.\n";
+
+            cout <<(double)putonfringe/(double)reachable*100 <<"% of successors were put on the fringe\n";
+            return;}
+            }
+        node=nextvec.front();
+        for(int j=0;j<nextvec.size();j++)
+            if(mandist(nextvec[j],goalnode,n)<=mandist(node,goalnode,n)){
+                node=nextvec[j];
+            }
+        }while(!comparenodes(node,prevnode,n,squares));
+        cout << "Stuck in a local maximum :(\n"<< expanded << " nodes expanded.\n";
+    }
+    cout << "Unable to reach the goal state.\n";
+    return ;
+}
+
+
+int main () {
+    bool askuserforinput=1;
+    int squares=1;//says whether the puzzle is in 3D or not
+    int searchtype=1; // 1 for BFS, 2 for DFS, 3 for A* and 4 for GBFS
+    int puzzle=1;// 1 for 15 puzzle, 2 for 26 and 3 for 63
+    int goal=2;//goal state number in file (1 or 2)
+    int n=4;
+    if(askuserforinput==1){
+
+    cout<< "Enter:\n1 for the 15-puzzle\n2 for the 26-puzzle\n3 for the 63-puzzle\n";
+    cin>> puzzle;
+    cout<< "Enter:\n1 for goal node 1\n2 for goal node 2\n3 for goal state 3\n";
+    cin >>goal;
+    cout<<"\nEnter:\n1 for BFS\n2 for DFS\n3 for A*\n4 for GBFS\n";
+    cin>> searchtype;
+    }
+    if(puzzle==2) n=3;
+    if (puzzle==2) squares=3;
+    if(puzzle==3) squares=4;
+
+ //initializing the first node
+  nodetype initnode, goalnode;
+  initnode.action=-1;
+  initnode.parent=-1;
+  initnode.pathcost=0;
+  initnode.depth=0;
+  initnode.positionintree=0;
+  for(int i=0;i<5;i++) initnode.child[i]=-1;
+
+  char c;//temporary value used for input from files
+  ifstream is; //used to open input files
+   if(puzzle==1) is.open("15.txt");
+   if(puzzle==2){ is.open("26.txt");}
+   if (puzzle==3){is.open("63.txt");}
+  if (is.is_open())
+  {
+//scanning initial and goal states from files
+//scan in 3D: 3x3 square in depth 0 first, then 1 and 2
+    for(int k=0;k<squares;k++)
+        for(int i=0;i<n;i++)
+             for(int j=0;j<n;j++){
+                do{is.get(c);}while(c=='\0' || c=='\n');
+            initnode.state[i][j][k]=c;
+                if (c=='0'){
+                    initnode.row=i;
+                    initnode.col=j;
+                    initnode.dep=k;
+                }
+             }
+        for(int m=0;m<goal-1;m++) do{is.get(c);}while(c=='\0' || c=='\n');
+         for(int k=0;k<squares;k++)
+        for(int i=0;i<n;i++)
+             for(int j=0;j<n;j++){
+            do{is.get(c);}while(c=='\0' || c=='\n');
+                    goalnode.state[i][j][k]=c;
+            }
+    is.close();
+//start the search
+    Search(initnode,goalnode,searchtype,n,squares);
+  }
+  else cout << "Unable to open file";
+  return 0;
+}
