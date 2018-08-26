@@ -1,4 +1,4 @@
-# Rubik-s-15-puzzle
+# 15-puzzle Solver
 Solver for: 15-puzzle, 3D 8-puzzle and 3D 15-Puzzle 
 using noninformed and informed (heuristic) search algorithms: BFS, DFS, A*, Hill-climbing
 
